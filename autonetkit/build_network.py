@@ -103,6 +103,7 @@ def initialise(input_graph):
     g_in.update(g_in.routers(platform="junosphere"), syntax="junos")
     g_in.update(g_in.routers(platform="dynagen"), syntax="ios")
     g_in.update(g_in.routers(platform="netkit"), syntax="quagga")
+    g_in.update(g_in.routers(platform="deter"), syntax="quagga")
     # TODO: is this used?
     g_in.update(g_in.servers(platform="netkit"), syntax="quagga")
 

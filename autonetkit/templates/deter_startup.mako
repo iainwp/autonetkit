@@ -1,4 +1,5 @@
 #!/bin/sh
+DETER config
 % for i in node.interfaces:
 /sbin/ifconfig ${i.id} ${i.ipv4_address} netmask ${i.ipv4_subnet.netmask} broadcast ${i.ipv4_subnet.broadcast} up
 % endfor

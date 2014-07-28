@@ -164,6 +164,7 @@ def compile_network(anm):
     for target_data in config.settings['Compile Targets'].values():
         host = target_data['host']
         platform = target_data['platform']
+        log.info(platform)
         if platform == 'netkit':
             import autonetkit.compilers.platform.netkit as pl_netkit
             platform_compiler = pl_netkit.NetkitCompiler(nidb, anm,
@@ -183,6 +184,9 @@ def compile_network(anm):
             import autonetkit.compilers.platform.junosphere as pl_junosphere
             platform_compiler = pl_junosphere.JunosphereCompiler(nidb,
                     anm, host)
+        elif platform == 'deter':
+            import autonetkit.compilers.platform.platform_deter as pl_deter
+            platform_compiler = pl_deter.DeterCompiler(nidb, anm, host)
 
         if any(g_phy.nodes(host=host, platform=platform)):
             log.info('Compiling configurations for %s on %s'

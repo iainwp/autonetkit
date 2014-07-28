@@ -28,7 +28,7 @@ class DeterCompiler(PlatformCompiler):
             DmNode = self.nidb.node(phy_node)
             DmNode.add_stanza("render")
             #TODO: order by folder and file template src/dst
-            DmNode.render.base = os.path.join("templates","quagga_deter")
+            DmNode.render.base = os.path.join("templates", "quagga")
             DmNode.render.template = os.path.join("templates",
                 "deter_startup.mako")
             DmNode.render.dst_folder = os.path.join("rendered",
@@ -100,6 +100,9 @@ class DeterCompiler(PlatformCompiler):
         lab_topology.web = "www.autonetkit.org"
         host_nodes = list(
             self.nidb.nodes(host=self.host, platform="deter"))
+        print "***"
+        print host_nodes
+
         if not len(host_nodes):
             log.debug("No Deter hosts for %s" % self.host)
 # also need collision domains for this host

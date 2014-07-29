@@ -203,6 +203,7 @@ def render_node(node):
                         )
                 dst_file = os.path.normpath((os.path.join(render_base_output_dir, template_file)))
                 dst_file, _ = os.path.splitext(dst_file) # remove .mako suffix
+                log.debug("rendering %s " % dst_file)
                 with open( dst_file, 'wb') as dst_fh:
                     dst_fh.write(mytemplate.render(
                         node = node,

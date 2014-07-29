@@ -11,10 +11,5 @@ machines=${topology.machines}
 
 [Net]
 % for config_item in topology.config_items:
-${config_item.device}=${config_item.value}
-%endfor
-
-[IP]
-% for config_item in topology.config_items:
-${config_item.device}=${config_item.ipaddr}
+${config_item.device},${config_item.interface}=${config_item.ip},${config_item.cd}
 %endfor

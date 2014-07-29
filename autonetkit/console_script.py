@@ -104,7 +104,7 @@ def main(options):
     elif options.target == "deter":
         log.info("Setting output target as Deter")
         settings['Graphml']['Node Defaults']['platform'] = "deter"
-        settings['Graphml']['Node Defaults']['host'] = "internal"
+        settings['Graphml']['Node Defaults']['host'] = "localhost"
 
     if options.debug or settings['General']['debug']:
         # TODO: fix this

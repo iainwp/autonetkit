@@ -25,51 +25,52 @@ class DeterCompiler(PlatformCompiler):
 # TODO: this should be all l3 devices not just routers
         for phy_node in g_phy.l3devices(host=self.host, syntax='quagga'):
             folder_name = naming.network_hostname(phy_node)
-            DmNode = self.nidb.node(phy_node)
-            DmNode.add_stanza("render")
+            log.debug("compiling %s to folder %s" % (phy_node, folder_name))
+            dm_node = self.nidb.node(phy_node)
+            dm_node.add_stanza("render")
             #TODO: order by folder and file template src/dst
-            DmNode.render.base = os.path.join("templates", "quagga")
-            DmNode.render.template = os.path.join("templates",
+            dm_node.render.base = os.path.join("templates", "quagga")
+            dm_node.render.template = os.path.join("templates",
                 "deter_startup.mako")
-            DmNode.render.dst_folder = os.path.join("rendered",
+            dm_node.render.dst_folder = os.path.join("rendered",
                 self.host, "deter")
-            DmNode.render.base_dst_folder = os.path.join("rendered",
+            dm_node.render.base_dst_folder = os.path.join("rendered",
                 self.host, "deter", folder_name)
-            DmNode.render.dst_file = "%s.startup" % folder_name
+            dm_node.render.dst_file = "%s.startup" % folder_name
 
-            DmNode.render.custom = {
+            dm_node.render.custom = {
                     'abc': 'def.txt'
                     }
 
 # allocate zebra information
-            DmNode.add_stanza("quagga")
-            if DmNode.is_router():
-                DmNode.quagga.password = "1234"
+            dm_node.add_stanza("zebra")
+            if dm_node.is_router():
+                dm_node.zebra.password = "1234"
             hostname = folder_name
             if hostname[0] in string.digits:
                 hostname = "r" + hostname
-            DmNode.hostname = hostname  # can't have . in quagga hostnames
-            #DmNode.add_stanza("ssh")
-            #DmNode.ssh.use_key = True  # TODO: make this set based on presence of key
+            dm_node.hostname = hostname  # can't have . in quagga hostnames
+            #dm_node.add_stanza("ssh")
+            #dm_node.ssh.use_key = True  # TODO: make this set based on presence of key
 
             # Note this could take external data
             int_ids = itertools.count(0)
-            for interface in DmNode.physical_interfaces():
+            for interface in dm_node.physical_interfaces():
                 numeric_id = int_ids.next()
                 interface.numeric_id = numeric_id
                 interface.id = self.index_to_int_id(numeric_id)
 
 # and allocate tap interface
-            #DmNode.add_stanza("tap")
-            #DmNode.tap.id = self.index_to_int_id(int_ids.next())
+            #dm_node.add_stanza("tap")
+            #dm_node.tap.id = self.index_to_int_id(int_ids.next())
 
-            quagga_compiler.compile(DmNode)
+            quagga_compiler.compile(dm_node)
 
-            if DmNode.bgp:
-                DmNode.bgp.debug = True
+            if dm_node.bgp:
+                dm_node.bgp.debug = True
                 static_routes = []
-                DmNode.quagga.static_routes = static_routes
-	
+                dm_node.zebra.static_routes = static_routes
+    
         # and lab.conf
         #self.allocate_tap_ips()
         self.lab_topology()
@@ -111,45 +112,24 @@ class DeterCompiler(PlatformCompiler):
         subgraph = self.nidb.subgraph(host_nodes, self.host)
 
         lab_topology.machines = " ".join(alpha_sort(naming.network_hostname(phy_node)
-            for phy_node in subgraph.l3devices()))
+                                                    for phy_node in subgraph.l3devices()))
 
+        # One stanza per node/interface to make import easy
         lab_topology.config_items = []
         for node in sorted(subgraph.l3devices()):
-	    	ip_version = node.ip.use_ipv4
-		collision_domains = ""; ip_addresses = ""; 		 
-	    
-		for interface in node.physical_interfaces():
-			#log.info(node.physical_interfaces())
-                	broadcast_domain = interface.ipv4_subnet
-			ip_address = interface.ipv4_address
-                	numeric_id = interface.numeric_id
+            print node
+            ip_version = node.ip.use_ipv4
+        
+            for interface in node.physical_interfaces():
+                #log.info(node.physical_interfaces())
+                broadcast_domain = interface.ipv4_subnet
+                ip_address = interface.ipv4_address
+                numeric_id = interface.numeric_id
+                id = interface.id
                 
-			# Handling Commas in the configuration
-			if numeric_id > 0:
-			    collision_domains += ", " + str(broadcast_domain)
-			    ip_addresses += ", " +  str(ip_address)
-			else:
-			    collision_domains += str(broadcast_domain)
-			    ip_addresses += str(ip_address)
-		    
-		# One stanza per node to make import easy
-		stanza = ConfigStanza(
-            		device=naming.network_hostname(node),
-                   	#key=numeric_id,
-                   	value=collision_domains,
-	    		ipaddr=ip_addresses
-               	); 
-		lab_topology.config_items.append(stanza); 
+                lab_topology.config_items.append(ConfigStanza(
+                    device=naming.network_hostname(node),
+                    interface=id,
+                    cd=broadcast_domain,
+                    ip=ip_address))
 
-        #lab_topology.tap_ips = []
-        #for node in subgraph:
-            #if node.tap:
-                #stanza = ConfigStanza(
-                    #device=naming.network_hostname(node),
-                    #id=node.tap.id.replace("eth", ""),  # strip ethx -> x
-                    #ip=node.tap.ip,
-                #)
-                #lab_topology.tap_ips.append(stanza)
-
-        #lab_topology.tap_ips = sorted(lab_topology.tap_ips, key = lambda x: x.ip)
-        lab_topology.config_items = sorted(lab_topology.config_items, key = lambda x: x.device)

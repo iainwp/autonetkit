@@ -10,6 +10,6 @@ LAB_WEB="${topology.web}"
 machines=${topology.machines}
 
 [Net]
-% for config_item in topology.config_items:
-${config_item.device},${config_item.interface}=${config_item.ip},${config_item.cd}
+% for ci in topology.config_items:
+${ci.device},${ci.interface}=${ci.ip},${ci.cd},${ci.mask}
 %endfor

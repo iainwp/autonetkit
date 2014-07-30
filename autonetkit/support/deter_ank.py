@@ -4,17 +4,25 @@ Usage: 	gendeter.py /path/to/lab.conf /path/to/detertop.xml
 @Author: Iain Phillips - modified code from Myles Grindon
 '''
 
-import os, sys, time, ConfigParser
+import os, sys, time, tarfile, fnmatch, ConfigParser
 import lxml.etree as etree
 from deter import topdl
 
-class Cfnode:
+class CfNode:
+
+  class CfInterface:
+    def __init__(self, n, a, c, m):
+      self.name = n
+      self.address = a
+      self.cd = c
+      self.netmask = m
+
   def __init__(self, n):
     self.name = n
     self.interfaces = []
 
-  def addif(self, name, addr, cd):
-    self.interfaces.append([name,addr,cd])
+  def addif(self, name, addr, cd, mask):
+    self.interfaces.append(CfNode.CfInterface(name,addr,cd,mask))
 
 class ConfigLoader:
   
@@ -69,10 +77,10 @@ class ConfigLoader:
       for n in self.ni:
         x = self.config_parser.get("Net", n)
         [host,inf] = n.split(",")
-        [addr,cd] = x.split(",")
+        [addr,cd,mask] = x.split(",")
         if host not in self.nai:
-          self.nai[host] = Cfnode(host)
-        self.nai[host].addif(inf, addr, cd)
+          self.nai[host] = CfNode(host)
+        self.nai[host].addif(inf, addr, cd, mask)
       
     
     except ConfigParser.NoSectionError, err:
@@ -172,7 +180,7 @@ def main():
   if len(sys.argv) >= 2:
     lab_config_file=sys.argv[1]
 
-  xml_outputfile = lab_config_file+".xml"
+  xml_outputfile = "deter.xml"
   if len(sys.argv) >= 3:
     xml_output_file=sys.argv[2]
 
@@ -182,20 +190,47 @@ def main():
   nai = lab_config.getNodesAndInterfaces()
 
   subs=[ topdl.Substrate(name="net"+str(x)) for x in lab_config.getNetworks() ]
-  elems = []
-  for h in nai:
-    elems.append(topdl.Computer(name=h, 
-                              interface=[topdl.Interface(name=i[0], substrate="net"+i[2]) 
-                                         for i in nai[h].interfaces]))
+  elems = [topdl.Computer(name=h, 
+                          software = topdl.Software(
+                            location='file:///proj/bgpsec/tarfiles/'+h+'.tar.gz',
+                            install='/'),
+                          os = topdl.OperatingSystem(
+                            name='Linux', distribution='Ubuntu'),
+                          interface=[topdl.Interface(name=i.name, 
+                                                     substrate = "net"+i.cd, 
+                                                     attribute = [topdl.Attribute('ip4_address', i.address),
+                                                                  topdl.Attribute('ip4_netmask', i.netmask),
+                                                                  topdl.Attribute('startup','/root/'+h+'.startup')],
+                                                   )
+                                     for i in nai[h].interfaces])
+           for h in nai]
+  
 
 
 
+  with open(xml_outputfile, "w") as f:
+    f.write(etree.tostring(etree.fromstring(
+      topdl.topology_to_xml(topdl.Topology(substrates=subs, elements=elems),
+                            top='experiment')),
+                          pretty_print=True))
+    f.close()
 
-  top = topdl.Topology(substrates=subs, elements=elems)
-  print etree.tostring(etree.fromstring(
-  topdl.topology_to_xml(top, top='experiment')), pretty_print=True)
 
-  #print topdl.topology_to_xml(top, top='experiment')
+  # find folder of lab.conf
+  f = os.path.dirname(lab_config_file)
+  startups = fnmatch.filter(os.listdir(f), "*.startup")
+
+  for x in startups:
+    print x
+    r = x.split('.')[0]
+    with tarfile.open(os.path.join(r+".tar.gz"),"w:gz") as tar:
+      tar.add(os.path.join(f,x),'/root/'+x)
+      tar.add(os.path.join(f,r),'/')
+      tar.close()
+  
+  print "Copy the .tar.gz files to /prof/bgpsec/tarfiles on deter"
+  print "Copy deter.xml to your homedir on deter"
+  print "run containerize.py (check the docs) on the deter.xml file"
 
 if __name__ == "__main__":
   main()

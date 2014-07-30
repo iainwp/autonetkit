@@ -33,9 +33,10 @@ class DeterCompiler(PlatformCompiler):
             dm_node.render.template = os.path.join("templates",
                 "deter_startup.mako")
             dm_node.render.dst_folder = os.path.join("rendered",
-                self.host, "deter")
+                "deter")
             dm_node.render.base_dst_folder = os.path.join("rendered",
-                self.host, "deter", folder_name)
+                                                          "deter", 
+                                                          folder_name)
             dm_node.render.dst_file = "%s.startup" % folder_name
 
             dm_node.render.custom = {
@@ -93,16 +94,13 @@ class DeterCompiler(PlatformCompiler):
         lab_topology = self.nidb.topology(self.host)
         lab_topology.render_template = os.path.join("templates",
             "deter_lab_conf.mako")
-        lab_topology.render_dst_folder = os.path.join("rendered",
-            self.host, "deter")
+        lab_topology.render_dst_folder = os.path.join("rendered", "deter")
         lab_topology.render_dst_file = "lab.conf"
         lab_topology.description = "AutoNetkit Lab"
         lab_topology.author = "AutoNetkit"
         lab_topology.web = "www.autonetkit.org"
         host_nodes = list(
             self.nidb.nodes(host=self.host, platform="deter"))
-        print "***"
-        print host_nodes
 
         if not len(host_nodes):
             log.debug("No Deter hosts for %s" % self.host)
@@ -117,19 +115,20 @@ class DeterCompiler(PlatformCompiler):
         # One stanza per node/interface to make import easy
         lab_topology.config_items = []
         for node in sorted(subgraph.l3devices()):
-            print node
             ip_version = node.ip.use_ipv4
         
             for interface in node.physical_interfaces():
                 #log.info(node.physical_interfaces())
                 broadcast_domain = interface.ipv4_subnet
                 ip_address = interface.ipv4_address
+                ip_netmask = interface.ipv4_subnet.netmask
                 numeric_id = interface.numeric_id
                 id = interface.id
-                
+
                 lab_topology.config_items.append(ConfigStanza(
                     device=naming.network_hostname(node),
                     interface=id,
                     cd=broadcast_domain,
-                    ip=ip_address))
+                    ip=ip_address,
+                    mask=ip_netmask))
 

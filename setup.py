@@ -13,7 +13,7 @@ setup (
              'autonetkit = autonetkit.console_script:console_entry',
              'ank_webserver = autonetkit.webserver:main',
              'ank_collect_server = autonetkit.collection.server:main',
-             'ank_deter_gen = autonetkit.support.deter_xml:main',
+             'ank_deter_gen = autonetkit.support.deter_ank:main',
          ],
      },
 

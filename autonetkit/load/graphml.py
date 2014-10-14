@@ -56,6 +56,9 @@ def load_graphml(input_data):
 
     # TODO: need to support edge index keying for multi graphs
     graph.remove_edges_from(edge for edge in graph.selfloop_edges())
+    print len(graph.edges())
+    graph = nx.Graph(graph)
+    print len(graph.edges())
 
 # TODO: if selfloops then log that are removing
 

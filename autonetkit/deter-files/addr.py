@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-def addr_to_name(find_addrs, ifconfig='/sbin/ifconfig'):
+def addr_to_name(find_addrs=[], ifconfig='/sbin/ifconfig'):
     '''
     Take a list of IP addresses and return a dict mapping each address to an
     interface name.  Invalid IP addresses are ignored.
@@ -47,7 +47,7 @@ def addr_to_name(find_addrs, ifconfig='/sbin/ifconfig'):
     # Build a regular expression that matches all the IPs.  We'll call ifconfig
     # once and look for all the IPs.
     addr_re= re.compile('inet(\s+addr:)?\s*(%s)' % '|'.join(ips))
-    print addr_re.pattern
+    #print addr_re.pattern
 
     for l in p.stdout:
 	# First match finds the name of the current interface
@@ -63,6 +63,6 @@ def addr_to_name(find_addrs, ifconfig='/sbin/ifconfig'):
     return rv
 
 # Command line
-rv = addr_to_name(sys.argv[1:])
-for (k, v) in rv.items():
-    print '%s: %s' % (k, v)
+#rv = addr_to_name(sys.argv[1:])
+#for (k, v) in rv.items():
+#    print '%s: %s' % (k, v)

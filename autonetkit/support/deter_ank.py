@@ -4,7 +4,7 @@ Usage: 	gendeter.py /path/to/lab.conf /path/to/detertop.xml
 @Author: Iain Phillips - modified code from Myles Grindon
 '''
 
-import os, sys, time, tarfile, fnmatch, ConfigParser
+import os, stat, sys, time, tarfile, fnmatch, ConfigParser
 import lxml.etree as etree
 from deter import topdl
 
@@ -70,8 +70,8 @@ class ConfigLoader:
       self.ni = self.config_parser.options("Net")
       self.nodes_net  = set([ n.split(',')[0] for n in self.ni ])
       self.networks = set([self.config_parser.get("Net", n).split(',')[1] for n in self.ni ])
-      print self.nodes_net
-      print self.networks
+#      print self.nodes_net
+#      print self.networks
 
       self.nai = {}
       for n in self.ni:
@@ -104,7 +104,7 @@ class ConfigLoader:
     for node in self.nodes_net:
       print "checking ", node 
       # Node startup files
-      if not os.path.isfile(self.config_dir + "/" + node + ".startup"):
+      if not os.path.isfile(os.path.join(self.config_dir,  node + ".startup")):
         print node
         sys.stderr.write('Missing .startup configuration file for node %s!\n' % node)
         sys.exit('Exiting!')
@@ -123,23 +123,7 @@ class ConfigLoader:
       if not os.path.isdir(self.config_dir+node_dir+"/etc"):
         sys.stderr.write('Missing "/etc" directory for node %s!\n' % node)
         exit=True
-          
-      # Hostname file
-      if not os.path.isfile(self.config_dir+node_dir+"/etc/hostname"):
-        sys.stderr.write('Missing "/etc/hostname" file for node %s!\n' % node)
-        exit=True
-          
-      # Zebra directory
-      if not os.path.isdir(self.config_dir+node_dir+"/etc/zebra"):
-        sys.stderr.write('Missing "/etc/zebra" directory for node %s!\n' % node)
-        exit=True
-          
-      # Quagga files
-      for file in self.quagga_file_list:
-        if not os.path.isfile(self.config_dir+node_dir+"/etc/zebra/"+str(file)):
-          sys.stderr.write('Missing "/etc/zebra/%s" configuration file for node %s\n' % node)
-          exit=True
-
+                    
     if exit:
       sys.exit('Exiting!')
   
@@ -169,11 +153,11 @@ class ConfigLoader:
 # 
 
 def usage():
-  print "Usage deter.py /path/to/lab.conf [/path/to/detertop.xml]"
+  print "Usage deter.py /path/to/lab.conf"
 
 def main():
   # 0. Check arguments
-  if len(sys.argv) < 2 or len(sys.argv) > 3:
+  if len(sys.argv) < 2 or len(sys.argv) > 2:
     usage()
     sys.exit()
 
@@ -181,32 +165,31 @@ def main():
     lab_config_file=sys.argv[1]
 
   xml_outputfile = "deter.xml"
-  if len(sys.argv) >= 3:
-    xml_output_file=sys.argv[2]
-
+#  inf_file = "interfaces.txt"
 
   # 1. Check config file 
   lab_config = ConfigLoader(lab_config_file)
   nai = lab_config.getNodesAndInterfaces()
 
-  subs=[ topdl.Substrate(name="net"+str(x)) for x in lab_config.getNetworks() ]
-  elems = [topdl.Computer(name=h, 
-                          software = topdl.Software(
-                            location='file:///proj/bgpsec/tarfiles/'+h+'.tar.gz',
-                            install='/'),
-                          os = topdl.OperatingSystem(
-                            name='Linux', distribution='Ubuntu'),
-                          interface=[topdl.Interface(name=i.name, 
-                                                     substrate = "net"+i.cd, 
-                                                     attribute = [topdl.Attribute('ip4_address', i.address),
-                                                                  topdl.Attribute('ip4_netmask', i.netmask),
-                                                                  topdl.Attribute('startup','/root/'+h+'.startup')],
-                                                   )
-                                     for i in nai[h].interfaces])
-           for h in nai]
-  
-
-
+  subs=[ topdl.Substrate(name="n"+str(x).replace('.','a').replace('/','m')) for x in lab_config.getNetworks() ]
+  print [n.name for n in subs]
+  elems = [topdl.Computer(
+             name=h, 
+             software = topdl.Software(
+                 location='file:///proj/bgpsec/tarfiles/'+h+'.tar.gz',
+                 install='/'),
+             os = topdl.OperatingSystem(name='Linux', distribution='Ubuntu', distributionversion='12.04'),
+             interface=[
+                 topdl.Interface(name=i.name, 
+                                 substrate = "n"+i.cd.replace('.','a').replace('/','m'), 
+                                 attribute = [topdl.Attribute('ip4_address', i.address),
+                                              topdl.Attribute('ip4_netmask', i.netmask)] )
+                 for i in nai[h].interfaces],
+             attribute=[
+                 topdl.Attribute('startup', '/root/'+h+'.startup'),
+                 ]
+             )
+          for h in nai]
 
   with open(xml_outputfile, "w") as f:
     f.write(etree.tostring(etree.fromstring(
@@ -214,20 +197,22 @@ def main():
                             top='experiment')),
                           pretty_print=True))
     f.close()
-
+  
 
   # find folder of lab.conf
-  f = os.path.dirname(lab_config_file)
-  startups = fnmatch.filter(os.listdir(f), "*.startup")
+  dirname = os.path.dirname(lab_config_file)
+  startups = fnmatch.filter(os.listdir(dirname), "*.startup")
 
-  for x in startups:
-    print x
-    r = x.split('.')[0]
-    with tarfile.open(os.path.join(r+".tar.gz"),"w:gz") as tar:
-      tar.add(os.path.join(f,x),'/root/'+x)
-      tar.add(os.path.join(f,r),'/')
+  mode = stat.S_IRWXU
+  for st in startups:
+    print st
+    r = st.split('.')[0]
+    with tarfile.open(os.path.join(r+".tar.gz"), "w:gz") as tar:
+      tar.add(os.path.join(dirname, r), '/')
+      os.chmod(os.path.join(dirname, st), mode)
+      tar.add(os.path.join(dirname, st), '/root/' + st)
       tar.close()
-  
+
   print "Copy the .tar.gz files to /prof/bgpsec/tarfiles on deter"
   print "Copy deter.xml to your homedir on deter"
   print "run containerize.py (check the docs) on the deter.xml file"

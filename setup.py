@@ -17,8 +17,10 @@ setup (
          ],
      },
 
-     author = 'Simon Knight',
-     author_email = "simon.knight@gmail.com",
+     # Original author Simon Knight.  This version is for deter deployment 
+
+     author = 'Iain Phillips',
+     author_email = "I.W.Phillips@lboro.ac.uk",
      url = "http://www.autonetkit.org",
      #packages = ['autonetkit', 'autonetkit.deploy', 'autonetkit.load', 'autonetkit.plugins'],
 

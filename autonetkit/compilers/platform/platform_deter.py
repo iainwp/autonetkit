@@ -16,7 +16,7 @@ class DeterCompiler(PlatformCompiler):
     @staticmethod
     def index_to_int_id(index):
         """Maps interface index to ethx e.g. eth1, eth2, ... Due to Mgmt network"""
-        return "eth%s" % str(int(index)+1)
+        return "DETER_INT_%s" % str(int(index)+1)
 
     def compile(self):
         log.info("Compiling Deter for %s" % self.host)

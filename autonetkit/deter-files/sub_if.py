@@ -14,16 +14,19 @@ def main():
           map[i] = rv[a]
 
   for x in sys.argv[2:]:
-    print "Processing file", x
-    with open(x, "r") as f:
-      contents = f.read()
-      for i in map:
-        contents = contents.replace(i, map[i])
-      f.close()
+    try:
+      print "Processing file", x
+      with open(x, "r") as f:
+        contents = f.read()
+        for i in map:
+          contents = contents.replace(i, map[i])
+        f.close()
     
-    with open(x, "w") as f:
-      f.write(contents)
-      f.close()
+      with open(x, "w") as f:
+        f.write(contents)
+        f.close()
+    except FileNotFoundError:
+      skip
 
 if __name__ == '__main__':
   main()
